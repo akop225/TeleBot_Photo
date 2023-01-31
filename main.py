@@ -35,12 +35,25 @@ def main(message):
     print(message)
     nstate = state.get_state(chat_id)
 
-    if nstate == 0:
+    if nstate == 0 and message.text.strip().lower() in ('\start', 'go', 'начать'):
         markup = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
         photo = telebot.types.KeyboardButton('Наложить водяной знак')
-        price = telebot.types.KeyboardButton('Прайс')
-        markup.add(photo, price)
+        new_price = telebot.types.KeyboardButton('Создать информацию о товаре')
+        markup.add(photo, new_price)
+
         bot.send_message(message.chat.id, f'Привет, {message.from_user.first_name} {message.from_user.last_name}!', reply_markup=markup)
+        nstate += 1
+        state.update_state(chat_id, nstate)
+
+    elif nstate == 0 and message.text.strip() in ('Возобновить'):
+        markup = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
+        photo = telebot.types.KeyboardButton('Наложить водяной знак')
+        price_output = telebot.types.KeyboardButton('Вывести информацию о товаре')
+        change_price = telebot.types.KeyboardButton('Изменить информацию о товаре')
+        markup.add(photo, price_output, change_price)
+
+        bot.send_message(message.chat.id, f'Чего желаете?',
+                         reply_markup=markup)
         nstate += 1
         state.update_state(chat_id, nstate)
 
@@ -57,7 +70,7 @@ def main(message):
         nstate += 1
         state.update_state(chat_id, nstate)
 
-    elif nstate == 2 and message.content_type == 'text' and message.text.isdigit() and not (0 < int(message.text.strip()) < 100):
+    elif nstate == 2 and message.content_type == 'text' and message.text.isdigit() and not (0 <= int(message.text.strip()) <= 100):
         markup = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=3)
         change = [telebot.types.KeyboardButton(f'{i}') for i in range(10, 101, 10)]
 
@@ -81,9 +94,9 @@ def main(message):
     elif nstate == 3 and message.content_type == 'photo':
         markup = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
         change = telebot.types.KeyboardButton('Изменить прозрачность')
-
+        price_list = telebot.types.KeyboardButton('Вывести информацию о товаре')
         end = telebot.types.KeyboardButton('Выход')
-        markup.add(change, end)
+        markup.add(change, price_list, end)
 
         try:
             time.sleep(0.5)
@@ -117,9 +130,34 @@ def main(message):
         bot.send_message(message.chat.id, "Введите процент прозрачности", reply_markup=markup)
         state.update_state(chat_id, nstate - 1)
 
-##### PRICE #####
+    elif nstate == 3 and message.content_type == 'text' and message.text.strip() == 'Изменить информацию о товаре':
+        markup = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=3)
+        change = [telebot.types.KeyboardButton(f'{i}') for i in range(36, 46)]
 
-    elif nstate == 1 and message.content_type == 'text' and message.text.strip() == 'Прайс':
+        end = telebot.types.KeyboardButton('Назад')
+        markup.add(change[0], change[1], change[2], change[3], change[4], change[5], change[6], change[7], change[8],
+                   change[9], end)
+        bot.send_message(message.chat.id, "Введите наименьший размер", reply_markup=markup)
+
+        nstate = 2
+        state.update_state(chat_id, nstate)
+
+    elif nstate == 3 and message.content_type == 'text' and message.text.strip() == 'Вывести информацию о товаре':
+        msg = f'Размерный ряд: {SizesAndPrices.get_min_size(chat_id)}-{SizesAndPrices.get_max_size(chat_id)}\n\nЦена: ' \
+              f'{SizesAndPrices.get_price(chat_id)} ₽\n\nПо заказу и вопросам пишите @justpeaker'
+
+        markup = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
+        photo = telebot.types.KeyboardButton('Наложить водяной знак')
+        price_output = telebot.types.KeyboardButton('Вывести информацию о товаре')
+        change_price = telebot.types.KeyboardButton('Изменить информацию о товаре')
+        markup.add(photo, price_output, change_price)
+
+        bot.send_message(message.chat.id, msg,
+                         reply_markup=markup)
+
+##### PRICE 1) Добавить или изменить информацию о товаре #####
+
+    elif message.text.strip() in ('Создать информацию о товаре', 'Изменить информацию о товаре'):
         markup = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=3)
         change = [telebot.types.KeyboardButton(f'{i}') for i in range(36, 46)]
 
@@ -129,13 +167,13 @@ def main(message):
         bot.send_message(message.chat.id, "Введите наименьший размер", reply_markup=markup)
         
         SizesAndPrices.start_price_and_size(chat_id)
-        nstate += 1
+        nstate = 2
         state.update_state(chat_id, nstate)
     
     elif nstate == 2 and message.content_type == 'text' and message.text.strip() == 'Назад':
         markup = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
         photo = telebot.types.KeyboardButton('Наложить водяной знак')
-        price = telebot.types.KeyboardButton('Прайс')
+        price = telebot.types.KeyboardButton('')
         markup.add(photo, price)
         bot.send_message(message.chat.id, f'Чего желаете?',
                          reply_markup=markup)
@@ -198,16 +236,32 @@ def main(message):
 
         markup = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
         photo = telebot.types.KeyboardButton('Наложить водяной знак')
-        price = telebot.types.KeyboardButton('Прайс')
-        markup.add(photo, price)
+        price_output = telebot.types.KeyboardButton('Вывести информацию о товаре')
+        change_price = telebot.types.KeyboardButton('Изменить информацию о товаре')
+        markup.add(photo, price_output, change_price)
+
         bot.send_message(message.chat.id, msg,
                          reply_markup=markup)
         nstate = 1
         state.update_state(chat_id, nstate)
 
+##### PRICE 2) Вывести информацию о товаре #####
+
+    elif message.text.strip() == 'Вывести информацию о товаре':
+        markup = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
+        price_list = telebot.types.KeyboardButton('Вывести информацию о товаре')
+        price_change = telebot.types.KeyboardButton('Изменить информацию о товаре')
+        end = telebot.types.KeyboardButton('Выход')
+        markup.add(price_list, price_change, end)
+
+        msg = f'Размерный ряд: {SizesAndPrices.get_min_size(chat_id)}-{SizesAndPrices.get_max_size(chat_id)}\n\nЦена: ' \
+              f'{SizesAndPrices.get_price(chat_id)} ₽\n\nПо заказу и вопросам пишите @justpeaker'
+
+        bot.send_message(message.chat.id, msg, reply_markup=markup)
+
     elif message.content_type == 'text' and message.text.strip() == 'Выход':
         markup = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
-        start = telebot.types.KeyboardButton('Начать')
+        start = telebot.types.KeyboardButton('Возобновить')
         markup.add(start)
         bot.send_message(message.chat.id, 'До скорых встреч!', reply_markup=markup)
         nstate = 0
@@ -216,118 +270,13 @@ def main(message):
     else:
         markup = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
         photo = telebot.types.KeyboardButton('Наложить водяной знак')
-        price = telebot.types.KeyboardButton('Прайс')
-        markup.add(photo, price)
+        price_output = telebot.types.KeyboardButton('Вывести информацию о товаре')
+        change_price = telebot.types.KeyboardButton('Изменить информацию о товаре')
+        markup.add(photo, price_output, change_price)
         bot.send_message(message.chat.id, f'Вы ввели что-то нереальное и магическое!\n'
                                           f'Возвращаю Вас в начальное меню',
                          reply_markup=markup)
         nstate = 1
         state.update_state(chat_id, nstate)
-
-
-# @bot.message_handler(commands=['start', 'go'])
-# def start(message):
-#     markup = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
-#     photo = telebot.types.KeyboardButton('Наложить водяной знак')
-#     end = telebot.types.KeyboardButton('Отмена')
-#
-#     markup.add(photo, end)
-#     msg = bot.send_message(message.chat.id, f'Привет, {message.from_user.first_name} {message.from_user.last_name}!', reply_markup=markup)
-#     bot.register_next_step_handler(msg, search)
-#
-#
-# @bot.message_handler(content_types='text')
-# def search(message):
-#     mesg = message.text.lower()
-#     if ("знак") in mesg:
-#         markup = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=3)
-#         change = [telebot.types.KeyboardButton(f'{i}') for i in range(10, 101, 10)]
-#         end = telebot.types.KeyboardButton('Отмена')
-#         markup.add(change[0], change[1], change[2], change[3], change[4], change[5], change[6], change[7], change[8],
-#                    change[9], end)
-#         msg = bot.send_message(message.chat.id, "Введите процент прозрачности", reply_markup=markup)
-#         bot.register_next_step_handler(msg, remake_photo)
-#
-#     elif mesg in ('go', 'го', 'давай', "заводись", "начать"):
-#         markup = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
-#         photo = telebot.types.KeyboardButton('Наложить водяной знак')
-#         end = telebot.types.KeyboardButton('Отмена')
-#
-#         markup.add(photo, end)
-#         msg = bot.send_message(message.chat.id,
-#                                f'Привет, {message.from_user.first_name} {message.from_user.last_name}!',
-#                                reply_markup=markup)
-#         bot.register_next_step_handler(msg, search)
-#
-#     elif 'изменить' in message.text.lower():
-#         markup = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=3)
-#         change = [telebot.types.KeyboardButton(f'{i}') for i in range(10, 101, 10)]
-#         end = telebot.types.KeyboardButton('Отмена')
-#         markup.add(change[0], change[1], change[2], change[3], change[4], change[5], change[6], change[7], change[8],
-#                    change[9], end)
-#         msg = bot.send_message(message.chat.id, "Введите процент прозрачности", reply_markup=markup)
-#         bot.register_next_step_handler(msg, remake_photo)
-#
-#     elif mesg in ('отмена', 'cancel'):
-#         markup = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
-#         start = telebot.types.KeyboardButton('Начать')
-#         markup.add(start)
-#         m = bot.send_message(message.chat.id, 'До скорых встреч!', reply_markup=markup)
-#         bot.register_next_step_handler(m, search)
-#     else:
-#         bot.send_message(message.chat.id, 'Если хотите выйти, просто нажмите на нопку отмены')
-#
-#
-# procent_of_sight = [35]
-# LIST_OF_IMAGES = []
-# last_media = ''
-#
-# @bot.message_handler(content_types=['photo', 'text'])
-# def remake_photo(message):
-#     global last_media, LIST_OF_IMAGES
-#     if message.content_type == "text":
-#         if str(parse(message.text)).isdigit():
-#             procent_of_sight[0] = parse(message.text)
-#             markup = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
-#             change = telebot.types.KeyboardButton('Изменить прозрачность')
-#             end = telebot.types.KeyboardButton('Отмена')
-#             markup.add(change, end)
-#             msg = bot.send_message(message.chat.id, "Отправьте фотографию", reply_markup=markup)
-#             bot.register_next_step_handler(msg, remake_photo)
-#         elif 'изменить' in message.text.lower():
-#             markup = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=3)
-#             change = [telebot.types.KeyboardButton(f'{i}') for i in range(10, 101, 10)]
-#             end = telebot.types.KeyboardButton('Отмена')
-#             markup.add(change[0], change[1], change[2], change[3], change[4], change[5], change[6], change[7], change[8], change[9], end)
-#             msg = bot.send_message(message.chat.id, "Введите процент прозрачности", reply_markup=markup)
-#             bot.register_next_step_handler(msg, remake_photo)
-#
-#         elif message.text.lower() in ('отмена', 'cancel'):
-#             markup = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
-#             start = telebot.types.KeyboardButton('Начать')
-#             markup.add(start)
-#             m = bot.send_message(message.chat.id, 'До скорых встреч!', reply_markup=markup)
-#             bot.register_next_step_handler(m, search)
-#         else:
-#             bot.send_message(message.chat.id, 'Если хотите выйти, просто нажмите на нопку отмены')
-#     else:
-#         file_info = bot.get_file(message.photo[-1].file_id)
-#         download_file = bot.download_file(file_info.file_path)
-#
-#         with open('user_photo.png', 'wb') as user_photo:
-#             user_photo.write(download_file)
-#         image = Image.open("user_photo.png").convert("RGBA")
-#
-#         size = 150
-#
-#         logo = Image.new('RGBA', image.size, (0, 0, 0, 0))
-#         font = ImageFont.truetype("edosz.ttf", size)
-#         d = ImageDraw.Draw(logo)
-#         sight = procent_of_sight[0]
-#         d.text((logo.width // 2 - (size * 4 // 3), logo.height // 2 - (size * 4 // 3)), 'J U S T\nP E A K',
-#                fill=(255, 255, 255, int(255 * sight / 100)), font=font)
-#         combined = Image.alpha_composite(image, logo)
-#         bot.send_photo(message.chat.id, combined)
-
 
 bot.polling(none_stop=True)
