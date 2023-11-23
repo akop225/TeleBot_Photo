@@ -12,7 +12,7 @@ import SizesAndPrices
 PERCENTS = [i for i in range(10, 101, 10)]
 
 
-bot = telebot.TeleBot('5468702833:AAGS0zvI_rXxlYh9yOnnGDBAxYbquoDA7Q0')
+bot = telebot.TeleBot('TOKEN')
 
 con = sqlite3.connect('telebot_data.db')
 cur = con.cursor()
